@@ -1,0 +1,25 @@
+spring:
+  output:
+    ansi:
+      enabled: ALWAYS
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+      routes:
+        - id: user-service
+          uri: lb:http://USER-SERVICE
+          predicates:
+            - Path=/api/v1/user/**
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.discovery: DEBUG
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+server:
+  port: 8111

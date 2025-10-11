@@ -1,0 +1,16 @@
+spring:
+  profiles:
+    active: native
+  application:
+    name: config
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: classpath:/configurations
+  output:
+    ansi:
+      enabled: ALWAYS
+
+server:
+  port: 8888
