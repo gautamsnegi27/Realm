@@ -1,4 +1,4 @@
-# Cadence Frontend
+# App Frontend
 
 A modern React frontend application for the Realm microservices platform, featuring secure authentication with both basic auth and OAuth2 social login capabilities.
 
@@ -32,7 +32,7 @@ A modern React frontend application for the Realm microservices platform, featur
 
 1. **Clone and navigate to the frontend directory**:
    ```bash
-   cd services/cadence-frontend
+   cd services/app-frontend
    ```
 
 2. **Install dependencies**:
@@ -141,13 +141,13 @@ The frontend integrates with the following backend endpoints:
 ### Build Docker Image
 
 ```bash
-docker build -t cadence-frontend .
+docker build -t app-frontend .
 ```
 
 ### Run Container
 
 ```bash
-docker run -p 3000:80 cadence-frontend
+docker run -p 3000:80 app-frontend
 ```
 
 ### Docker Compose
@@ -155,10 +155,10 @@ docker run -p 3000:80 cadence-frontend
 The frontend is included in the main `docker-compose.yml` file:
 
 ```yaml
-cadence-frontend:
-  container_name: ms_cadence_frontend
+app-frontend:
+  container_name: ms_app_frontend
   build:
-    context: ./services/cadence-frontend
+    context: ./services/app-frontend
     dockerfile: Dockerfile
   ports:
     - "3000:80"

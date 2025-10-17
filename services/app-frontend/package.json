@@ -1,5 +1,5 @@
 {
-  "name": "cadence-frontend",
+  "name": "app-frontend",
   "version": "1.0.0",
   "description": "React frontend for Realm microservices authentication",
   "private": true,
