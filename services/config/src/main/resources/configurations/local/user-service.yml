@@ -39,7 +39,7 @@ keycloak:
   realm: realm-service
   resource: user-service-client
   credentials:
-    secret: ${KEYCLOAK_CLIENT_SECRET:changeme}
+    secret: ${KEYCLOAK_CLIENT_SECRET:cCckctPYHgXGdbTGTk9bfYuXx6vCGXPJ}
 
 eureka:
   instance:

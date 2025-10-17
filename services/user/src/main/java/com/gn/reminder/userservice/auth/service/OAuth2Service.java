@@ -2,15 +2,25 @@ package com.gn.reminder.userservice.auth.service;
 
 import com.gn.reminder.userservice.auth.dto.AuthResponse;
 import com.gn.reminder.userservice.auth.dto.OAuth2LoginRequest;
+import com.gn.reminder.userservice.auth.dto.OAuth2CallbackRequest;
 import com.gn.reminder.userservice.auth.util.JwtUtil;
 import com.gn.reminder.userservice.user.domain.User;
 import com.gn.reminder.userservice.user.dto.Profile;
 import com.gn.reminder.userservice.user.repository.UserRepo;
 import java.time.Instant;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 
 /**
  * Service for handling OAuth2/Social Login integration with Keycloak
@@ -23,6 +33,16 @@ public class OAuth2Service {
 
   private final UserRepo userRepository;
   private final JwtUtil jwtUtil;
+  private final RestTemplate restTemplate = new RestTemplate();
+
+  @Value("${keycloak.auth-server-url:http://localhost:9191}")
+  private String keycloakUrl;
+
+  @Value("${keycloak.realm:realm-service}")
+  private String keycloakRealm;
+
+  @Value("${keycloak.credentials.secret:changeme}")
+  private String clientSecret;
 
   /**
    * Handle OAuth2 login - create or update user from social provider
@@ -67,6 +87,134 @@ public class OAuth2Service {
             .email(user.getEmail())
             .userId(user.getId())
             .build();
+  }
+
+  /**
+   * Handle OAuth2 callback with authorization code
+   * Securely exchanges code for tokens and processes user login
+   *
+   * @param request OAuth2 callback request with authorization code
+   * @return AuthResponse with JWT token
+   */
+  @Transactional
+  public AuthResponse handleOAuth2Callback(OAuth2CallbackRequest request) {
+    try {
+      // Exchange authorization code for tokens
+      var tokenResponse = exchangeCodeForTokens(request);
+
+      // Get user info from Keycloak UserInfo endpoint
+      Map<String, Object> userInfo = getUserInfoFromKeycloak(tokenResponse.get("access_token").toString());
+
+      // Validate required fields
+      if (!userInfo.containsKey("sub")) {
+        throw new RuntimeException("Invalid user info: missing subject (sub) field");
+      }
+
+      // Create OAuth2LoginRequest from token info
+      String email = userInfo.containsKey("email") ?
+              userInfo.get("email").toString() :
+              userInfo.get("sub").toString() + "@" + request.getProvider() + ".local";
+
+      String username = userInfo.containsKey("preferred_username") ?
+              userInfo.get("preferred_username").toString() :
+              (userInfo.containsKey("email") ?
+                      userInfo.get("email").toString().split("@")[0] :
+                      userInfo.get("sub").toString());
+
+      var oauth2LoginRequest = OAuth2LoginRequest.builder()
+              .provider(request.getProvider())
+              .providerId(userInfo.get("sub").toString())
+              .email(email)
+              .username(username)
+              .firstName(userInfo.getOrDefault("given_name", "").toString())
+              .lastName(userInfo.getOrDefault("family_name", "").toString())
+              .accessToken(tokenResponse.get("access_token").toString())
+              .build();
+
+      // Process the OAuth2 login
+      return handleOAuth2Login(oauth2LoginRequest);
+
+    } catch (Exception e) {
+      log.error("OAuth2 callback processing failed", e);
+      throw new RuntimeException("OAuth2 authentication failed: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Exchange authorization code for tokens with Keycloak
+   */
+  private Map<String, Object> exchangeCodeForTokens(OAuth2CallbackRequest request) {
+    var tokenEndpoint = keycloakUrl + "/realms/" + keycloakRealm + "/protocol/openid-connect/token";
+
+    var headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+    headers.setBasicAuth("user-service-client", clientSecret);
+
+    MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+    body.add("grant_type", "authorization_code");
+    body.add("code", request.getCode());
+    body.add("redirect_uri", request.getRedirectUri());
+
+    var requestEntity = new HttpEntity<>(body, headers);
+
+    try {
+      var response = restTemplate.exchange(
+              tokenEndpoint,
+              HttpMethod.POST,
+              requestEntity,
+              Map.class
+      );
+
+      if (!response.getStatusCode().is2xxSuccessful()) {
+        throw new RuntimeException("Failed to exchange authorization code for tokens");
+      }
+
+      @SuppressWarnings("unchecked")
+      Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
+
+      // Validate response contains access token
+      if (responseBody == null || !responseBody.containsKey("access_token")) {
+        throw new RuntimeException("Invalid token response: missing access_token");
+      }
+
+      return responseBody;
+
+    } catch (Exception e) {
+      log.error("Token exchange failed: {}", e.getMessage());
+      throw e;
+    }
+  }
+
+  /**
+   * Get user information from Keycloak UserInfo endpoint
+   */
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> getUserInfoFromKeycloak(String accessToken) {
+    var userInfoEndpoint = keycloakUrl + "/realms/" + keycloakRealm + "/protocol/openid-connect/userinfo";
+
+    var headers = new HttpHeaders();
+    headers.setBearerAuth(accessToken);
+
+    var requestEntity = new HttpEntity<>(headers);
+
+    try {
+      var response = restTemplate.exchange(
+              userInfoEndpoint,
+              HttpMethod.GET,
+              requestEntity,
+              Map.class
+      );
+
+      if (!response.getStatusCode().is2xxSuccessful()) {
+        throw new RuntimeException("Failed to fetch user info from Keycloak");
+      }
+
+      return (Map<String, Object>) response.getBody();
+
+    } catch (Exception e) {
+      log.error("Failed to fetch user info: {}", e.getMessage());
+      throw new RuntimeException("Failed to fetch user info: " + e.getMessage());
+    }
   }
 
   /**

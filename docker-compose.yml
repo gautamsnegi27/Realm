@@ -218,29 +218,25 @@ services:
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
 
+  cadence-frontend:
+    container_name: ms_cadence_frontend
+    build:
+      context: ./services/cadence-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    networks:
+      - microservices-net
+    depends_on:
+      - gateway
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8111/api/v1
+      - VITE_GATEWAY_URL=http://localhost:8111
+      - VITE_KEYCLOAK_URL=http://localhost:9191
+      - VITE_KEYCLOAK_REALM=realm-service
+      - VITE_KEYCLOAK_CLIENT_ID=user-service-client
+
 #  reminder-service:
-#    profiles: ["apps"]
-#    container_name: ms_reminder_service
-#    build:
-#      context: ./services/reminder
-#      dockerfile: Dockerfile
-#    ports:
-#      - 9090:9090
-#    networks:
-#      - microservices-net
-#    depends_on:
-#      config:
-#        condition: service_healthy
-#      discovery:
-#        condition: service_healthy
-#      postgres:
-#        condition: service_started
-#    environment:
-#      - SPRING_CONFIG_IMPORT=optional:configserver:http://config:8888
-#      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/reminder_db
-#      - SPRING_DATASOURCE_USERNAME=admin
-#      - SPRING_DATASOURCE_PASSWORD=test
-#      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery:8761/eureka/
 
 networks:
   microservices-net:
