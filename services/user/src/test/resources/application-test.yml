@@ -1,0 +1,40 @@
+spring:
+  data:
+    mongodb:
+      # Testcontainers will automatically configure this
+      database: user-service-test
+      auto-index-creation: true
+  # Disable caching for tests (use simple in-memory cache)
+  cache:
+    type: simple
+  cloud:
+    config:
+      enabled: false
+      import-check:
+        enabled: false
+    discovery:
+      enabled: false
+
+eureka:
+  client:
+    enabled: false
+
+jwt:
+  secret: TestSecretKeyForJWTTokenGenerationMustBeAtLeast256BitsLongForHS256AlgorithmTestOnly
+  expiration: 86400000
+
+# Disable Keycloak for tests
+keycloak:
+  enabled: false
+
+logging:
+  level:
+    com.gn.reminder: INFO
+    org.springframework.test: INFO
+    org.testcontainers: INFO
+
+management:
+  health:
+    mongo:
+      enabled: true
+

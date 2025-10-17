@@ -1,0 +1,71 @@
+# Local Development Configuration for User Service
+# Active when: --spring.profiles.active=local
+
+spring:
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      username: admin
+      password: test
+      database: user-service
+      authentication-database: admin
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+  cache:
+    type: redis
+    redis:
+      time-to-live: 1800000  # 30 minutes
+      cache-null-values: false
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+# JWT Configuration - Local development (hardcoded for convenience)
+jwt:
+  secret: LocalDevSecretKeyForJWTTokenGenerationMustBeAtLeast256BitsLongForHS256AlgorithmToWorkProperlyInDevelopment
+  expiration: 86400000  # 24 hours
+
+# Keycloak Configuration - Local development
+keycloak:
+  enabled: true
+  auth-server-url: http://localhost:9191
+  realm: realm-service
+  resource: user-service-client
+  credentials:
+    secret: ${KEYCLOAK_CLIENT_SECRET:changeme}
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+# Logging - Debug level for local development
+logging:
+  level:
+    com.gn.reminder: INFO
+    org.springframework.security: INFO
+    org.springframework.data.mongodb: INFO
+
+# Actuator endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+server:
+  port: 8891
+  shutdown: graceful
+

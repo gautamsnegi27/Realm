@@ -1,0 +1,85 @@
+# AWS CodeBuild buildspec.yml
+# Used by AWS CodePipeline for automated deployments
+
+version: 0.2
+
+env:
+  variables:
+    AWS_DEFAULT_REGION: us-east-1
+    SPRING_PROFILES_ACTIVE: prod
+  parameter-store:
+    JWT_SECRET: /realm/jwt-secret
+    MONGO_PASSWORD: /realm/mongodb-password
+    POSTGRES_PASSWORD: /realm/postgres-password
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
+      - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+  
+  build:
+    commands:
+      - echo Build started on `date`
+      
+      # Build Maven projects
+      - echo Building Config Server...
+      - cd services/config && mvn clean package -DskipTests && cd ../..
+      - echo Building Discovery Server...
+      - cd services/discovery && mvn clean package -DskipTests && cd ../..
+      - echo Building Gateway...
+      - cd services/gateway && mvn clean package -DskipTests && cd ../..
+      - echo Building User Service...
+      - cd services/user && mvn clean package -DskipTests && cd ../..
+      
+      # Build and push Docker images
+      - echo Building Docker images...
+      
+      # Config Server
+      - docker build -t realm/config-server:latest services/config
+      - docker tag realm/config-server:latest $REPOSITORY_URI/realm/config-server:$IMAGE_TAG
+      - docker tag realm/config-server:latest $REPOSITORY_URI/realm/config-server:latest
+      - docker push $REPOSITORY_URI/realm/config-server:$IMAGE_TAG
+      - docker push $REPOSITORY_URI/realm/config-server:latest
+      
+      # Discovery Server
+      - docker build -t realm/discovery-server:latest services/discovery
+      - docker tag realm/discovery-server:latest $REPOSITORY_URI/realm/discovery-server:$IMAGE_TAG
+      - docker tag realm/discovery-server:latest $REPOSITORY_URI/realm/discovery-server:latest
+      - docker push $REPOSITORY_URI/realm/discovery-server:$IMAGE_TAG
+      - docker push $REPOSITORY_URI/realm/discovery-server:latest
+      
+      # Gateway
+      - docker build -t realm/gateway:latest services/gateway
+      - docker tag realm/gateway:latest $REPOSITORY_URI/realm/gateway:$IMAGE_TAG
+      - docker tag realm/gateway:latest $REPOSITORY_URI/realm/gateway:latest
+      - docker push $REPOSITORY_URI/realm/gateway:$IMAGE_TAG
+      - docker push $REPOSITORY_URI/realm/gateway:latest
+      
+      # User Service
+      - docker build -t realm/user-service:latest services/user
+      - docker tag realm/user-service:latest $REPOSITORY_URI/realm/user-service:$IMAGE_TAG
+      - docker tag realm/user-service:latest $REPOSITORY_URI/realm/user-service:latest
+      - docker push $REPOSITORY_URI/realm/user-service:$IMAGE_TAG
+      - docker push $REPOSITORY_URI/realm/user-service:latest
+  
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Updating ECS services...
+      - |
+        for service in config-server discovery-server gateway user-service; do
+          aws ecs update-service --cluster realm-cluster --service $service --force-new-deployment --region $AWS_DEFAULT_REGION || true
+        done
+
+artifacts:
+  files:
+    - '**/*'
+
+cache:
+  paths:
+    - '/root/.m2/**/*'
+

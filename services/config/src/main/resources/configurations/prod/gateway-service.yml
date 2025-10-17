@@ -1,0 +1,87 @@
+# Production Configuration for Gateway Service
+# Active when: --spring.profiles.active=prod
+# ALL SENSITIVE VALUES MUST COME FROM ENVIRONMENT VARIABLES
+
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+      routes:
+        - id: user-service
+          uri: lb:http://USER-SERVICE
+          predicates:
+            - Path=/api/v1/user/**,/api/v1/auth/**
+      # Global timeout configuration
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 30s
+  lifecycle:
+    timeout-per-shutdown-phase: 60s  # Longer timeout for production
+
+# JWT Configuration - MUST be set via environment variable
+jwt:
+  secret: ${JWT_SECRET}  # Required: Must match user-service
+  expiration: ${JWT_EXPIRATION:3600000}  # 1 hour for production
+
+# Keycloak Configuration - Production
+keycloak:
+  enabled: ${KEYCLOAK_ENABLED:true}
+  jwk-set-uri: ${KEYCLOAK_JWK_URI}  # Required from AWS Secrets Manager
+  realm: ${KEYCLOAK_REALM}
+  auth-server-url: ${KEYCLOAK_URL}
+  client-id: ${KEYCLOAK_CLIENT_ID}
+
+# Rate Limiting Configuration (Resilience4j)
+resilience4j:
+  ratelimiter:
+    instances:
+      gatewayRateLimiter:
+        limitForPeriod: ${RATE_LIMIT_PER_PERIOD:100}  # 100 requests
+        limitRefreshPeriod: ${RATE_LIMIT_REFRESH_PERIOD:60s}  # per 60 seconds
+        timeoutDuration: 5s
+
+eureka:
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${spring.cloud.client.hostname}:${random.value}
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL}  # Required: Discovery server URL
+    fetch-registry: true
+    register-with-eureka: true
+
+# Production logging
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: WARN
+    com.gn.reminder.gateway.security: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# Graceful shutdown for zero-downtime deployments
+server:
+  port: 8113
+  shutdown: graceful
+  netty:
+    connection-timeout: 20s
+
+# Actuator for AWS ALB health checks
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    export:
+      cloudwatch:
+        enabled: true
+        namespace: Realm/Gateway
+

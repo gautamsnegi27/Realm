@@ -1,0 +1,34 @@
+# Local Development Configuration for Discovery Service
+# Active when: --spring.profiles.active=local
+
+spring:
+  output:
+    ansi:
+      enabled: ALWAYS
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+    serviceUrl:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+server:
+  port: 8761
+  shutdown: graceful
+
+logging:
+  level:
+    com.netflix.eureka: DEBUG
+    com.netflix.discovery: DEBUG
+

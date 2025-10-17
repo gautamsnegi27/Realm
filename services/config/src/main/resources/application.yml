@@ -7,10 +7,30 @@ spring:
     config:
       server:
         native:
-          search-locations: classpath:/configurations
+          # Support environment-specific configurations
+          search-locations: >
+            classpath:/configurations/{profile},
+            classpath:/configurations
   output:
     ansi:
       enabled: ALWAYS
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
 
 server:
   port: 8888
+  shutdown: graceful
+
+# Actuator configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,env
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    org.springframework.cloud.config: DEBUG

@@ -1,0 +1,71 @@
+# Test Environment Configuration for User Service
+# Active when: --spring.profiles.active=test
+
+spring:
+  data:
+    mongodb:
+      host: ${MONGO_HOST:localhost}
+      port: ${MONGO_PORT:27017}
+      username: ${MONGO_USER:admin}
+      password: ${MONGO_PASSWORD:test}
+      database: user-service-test
+      authentication-database: admin
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+      password: ${REDIS_PASSWORD:}
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+  cache:
+    type: redis
+    redis:
+      time-to-live: ${CACHE_TTL:1800000}  # 30 minutes default
+      cache-null-values: false
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+# JWT Configuration - Test environment
+jwt:
+  secret: ${JWT_SECRET:TestSecretKeyForJWTTokenGenerationMustBeAtLeast256BitsLongForHS256AlgorithmToWorkProperlyInTestEnv}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+# Keycloak Configuration - Test environment
+keycloak:
+  enabled: ${KEYCLOAK_ENABLED:true}
+  auth-server-url: ${KEYCLOAK_URL:http://localhost:9191}
+  realm: ${KEYCLOAK_REALM:realm-service}
+  resource: ${KEYCLOAK_CLIENT_ID:user-service-client}
+  credentials:
+    secret: ${KEYCLOAK_CLIENT_SECRET:changeme}
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8762/eureka/}
+
+# Logging - Info level for test environment
+logging:
+  level:
+    com.gn.reminder: INFO
+    org.springframework.security: INFO
+
+# Actuator endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env
+  endpoint:
+    health:
+      show-details: when-authorized
+
+server:
+  port: 8892
+  shutdown: graceful
+

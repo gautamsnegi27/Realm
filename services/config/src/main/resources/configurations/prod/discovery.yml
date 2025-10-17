@@ -1,0 +1,51 @@
+# Production Configuration for Discovery Service
+# Active when: --spring.profiles.active=prod
+
+eureka:
+  instance:
+    hostname: ${EUREKA_HOSTNAME}  # Required: discovery-server.realm.local
+    prefer-ip-address: false
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+  client:
+    register-with-eureka: ${EUREKA_REGISTER_WITH_SELF:false}
+    fetch-registry: ${EUREKA_FETCH_REGISTRY:false}
+    serviceUrl:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://${eureka.instance.hostname}:${server.port}/eureka/}
+  server:
+    # Enable self-preservation mode
+    enable-self-preservation: true
+    renewal-percent-threshold: 0.85
+    # Peer awareness for clustering
+    wait-time-in-ms-when-sync-empty: 0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    export:
+      cloudwatch:
+        enabled: true
+        namespace: Realm/Discovery
+
+server:
+  port: 8763
+  shutdown: graceful
+
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 60s
+
+logging:
+  level:
+    root: INFO
+    com.netflix.eureka: WARN
+    com.netflix.discovery: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+

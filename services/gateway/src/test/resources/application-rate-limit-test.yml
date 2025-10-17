@@ -1,0 +1,63 @@
+# Test Configuration for Rate Limiting Integration Tests
+# This profile is used specifically for testing rate limiting functionality
+
+spring:
+  application:
+    name: gateway-service-test
+  cloud:
+    discovery:
+      enabled: false
+    gateway:
+      discovery:
+        locator:
+          enabled: false
+      routes:
+        - id: test-route
+          uri: http://httpbin.org
+          predicates:
+            - Path=/api/v1/**
+  lifecycle:
+    timeout-per-shutdown-phase: 5s
+
+# Disable external dependencies for testing
+eureka:
+  client:
+    enabled: false
+
+keycloak:
+  enabled: false
+
+# JWT Configuration for testing
+jwt:
+  secret: TestSecretKeyForRateLimitingIntegrationTestsMustBeAtLeast256BitsLongForHS256Algorithm
+  expiration: 3600000
+
+# Rate Limiting Configuration - Configured for fast testing
+resilience4j:
+  ratelimiter:
+    instances:
+      gatewayRateLimiter:
+        limitForPeriod: 10        # 10 requests (configurable via test properties)
+        limitRefreshPeriod: 60s   # per 60 seconds (configurable via test properties)
+        timeoutDuration: 1s       # Wait max 1s for permission (faster for tests)
+
+# Detailed logging for debugging rate limiting
+logging:
+  level:
+    com.gn.reminder.gateway.security: DEBUG
+    io.github.resilience4j: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+
+# Actuator endpoints for testing
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+server:
+  port: 0  # Random port for testing
+  shutdown: graceful

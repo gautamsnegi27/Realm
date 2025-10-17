@@ -1,0 +1,90 @@
+# Production Configuration for User Service
+# Active when: --spring.profiles.active=prod
+# ALL SENSITIVE VALUES MUST COME FROM ENVIRONMENT VARIABLES
+
+spring:
+  data:
+    mongodb:
+      # AWS DocumentDB connection
+      host: ${MONGO_HOST}  # Required: DocumentDB endpoint
+      port: ${MONGO_PORT:27017}
+      username: ${MONGO_USER}  # Required: From AWS Secrets Manager
+      password: ${MONGO_PASSWORD}  # Required: From AWS Secrets Manager
+      database: ${MONGO_DATABASE:user-service}
+      authentication-database: admin
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+      timeout: 2000ms
+      ssl: ${REDIS_SSL:true}
+      lettuce:
+        pool:
+          max-active: ${REDIS_POOL_MAX:20}
+          max-idle: ${REDIS_POOL_MAX_IDLE:10}
+          min-idle: ${REDIS_POOL_MIN_IDLE:5}
+  cache:
+    type: redis
+    redis:
+      time-to-live: ${CACHE_TTL:1800000}  # 30 minutes default
+      cache-null-values: false
+  lifecycle:
+    timeout-per-shutdown-phase: 60s  # Longer timeout for production
+
+# JWT Configuration - MUST be set via environment variable
+jwt:
+  secret: ${JWT_SECRET}  # Required: Strong random secret (64+ chars)
+  expiration: ${JWT_EXPIRATION:3600000}  # 1 hour for production (tighter security)
+
+# Keycloak Configuration - Production
+keycloak:
+  enabled: ${KEYCLOAK_ENABLED:true}
+  auth-server-url: ${KEYCLOAK_URL}
+  realm: ${KEYCLOAK_REALM}
+  resource: ${KEYCLOAK_CLIENT_ID}
+  credentials:
+    secret: ${KEYCLOAK_CLIENT_SECRET}
+
+eureka:
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${spring.cloud.client.hostname}:${random.value}
+  client:
+    service-url:
+      # AWS Cloud Map or ECS Service Discovery
+      defaultZone: ${EUREKA_URL}  # Required: Discovery server URL
+
+# Production logging - Structured JSON for CloudWatch
+logging:
+  level:
+    root: INFO
+    com.gn.reminder: INFO
+    org.springframework.security: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# Graceful shutdown for zero-downtime deployments
+server:
+  port: 8893
+  shutdown: graceful
+  tomcat:
+    connection-timeout: 20s
+    threads:
+      max: 200
+      min-spare: 10
+
+# Actuator for AWS health checks
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    export:
+      cloudwatch:
+        enabled: true
+        namespace: Realm/UserService
+

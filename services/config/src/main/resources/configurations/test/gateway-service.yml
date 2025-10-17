@@ -1,0 +1,61 @@
+# Test Environment Configuration for Gateway Service
+# Active when: --spring.profiles.active=test
+
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+      routes:
+        - id: user-service
+          uri: lb:http://USER-SERVICE
+          predicates:
+            - Path=/api/v1/user/**,/api/v1/auth/**
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+# JWT Configuration - Test environment
+jwt:
+  secret: ${JWT_SECRET:TestSecretKeyForJWTTokenGenerationMustBeAtLeast256BitsLongForHS256AlgorithmToWorkProperlyInTestEnv}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+# Keycloak Configuration - Test environment
+keycloak:
+  enabled: ${KEYCLOAK_ENABLED:true}
+  jwk-set-uri: ${KEYCLOAK_JWK_URI:http://localhost:9191/realms/realm-service/protocol/openid-connect/certs}
+  realm: ${KEYCLOAK_REALM:realm-service}
+  auth-server-url: ${KEYCLOAK_URL:http://localhost:9191}
+  client-id: ${KEYCLOAK_CLIENT_ID:user-service-client}
+
+# Rate Limiting Configuration (Resilience4j)
+resilience4j:
+  ratelimiter:
+    instances:
+      gatewayRateLimiter:
+        limitForPeriod: ${RATE_LIMIT_PER_PERIOD:100}
+        limitRefreshPeriod: ${RATE_LIMIT_REFRESH_PERIOD:60s}
+        timeoutDuration: 5s
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8762/eureka/}
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    com.gn.reminder.gateway.security: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env
+
+server:
+  port: 8112
+  shutdown: graceful
+
