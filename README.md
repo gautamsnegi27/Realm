@@ -399,7 +399,6 @@ docker-compose exec postgres psql -U admin -d reminder_db
 | Document | Description |
 |----------|-------------|
 | [QUICK_START.md](./QUICK_START.md) | Local development & Docker setup |
-| [AWS_DEPLOYMENT_GUIDE.md](./docs/AWS_DEPLOYMENT_GUIDE.md) | Complete AWS deployment strategy |
 | [Keycloak Setup](./keycloak/README.md) | Keycloak configuration for OAuth2/Social login |
 
 ---
@@ -424,22 +423,12 @@ This project is licensed under the MIT License.
 
 - **Issues**: Create a GitHub issue
 - **Documentation**: Check the docs folder
-- **Email**: support@realm.com (update with your email)
+- **Email**: gautamsnegi27@gmail.com
 
----
-
-## 🎯 Roadmap
-
-- [ ] Add more microservices (notification, payment)
-- [ ] Implement distributed tracing (Zipkin/Jaeger)
-- [ ] Add API versioning
-- [ ] Implement event-driven architecture (Kafka)
-- [ ] Add GraphQL support
-- [ ] Mobile app integration
 
 ---
 
 **Built with ❤️ using Spring Boot & AWS**
 
-🚀 **Ready to deploy? See [AWS_DEPLOYMENT_GUIDE.md](./docs/AWS_DEPLOYMENT_GUIDE.md)**
+🚀 **Ready to deploy?**
 
